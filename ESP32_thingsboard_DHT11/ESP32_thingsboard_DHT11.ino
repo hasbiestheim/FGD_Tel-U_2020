@@ -1,10 +1,8 @@
 #include "ThingsBoard.h"
 
 #include <WiFi.h>
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <DHT_U.h>
-#define DHTTYPE    DHT22
+#include "DHT.h"
+#define DHTTYPE    DHT11
 
 #define WIFI_AP             "estheim@HUAWEI"
 #define WIFI_PASSWORD       "1sampai100"
@@ -25,14 +23,16 @@ WiFiClient espClient;
 ThingsBoard tb(espClient);
 // the Wifi radio's status
 int status = WL_IDLE_STATUS;
-
-DHT_Unified dht(DHTPIN, DHTTYPE);
+float t,h;
+DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
   // initialize serial for debugging
   Serial.begin(SERIAL_DEBUG_BAUD);
   WiFi.begin(WIFI_AP, WIFI_PASSWORD);
   InitWiFi();
+  dht.begin();
+
 }
 
 void loop() {
@@ -59,14 +59,16 @@ void loop() {
   // Uploads new telemetry to ThingsBoard using MQTT.
   // See https://thingsboard.io/docs/reference/mqtt-api/#telemetry-upload-api
   // for more details
-  sensors_event_t event;
-  dht.temperature().getEvent(&event);
+  t = dht.readTemperature();
+  h = dht.readHumidity();
+  tb.sendTelemetryFloat("temperature", t);
   
-  tb.sendTelemetryInt("temperature", event.temperature);
-  
-  dht.humidity().getEvent(&event);
-  tb.sendTelemetryFloat("humidity", event.relative_humidity);
-
+  tb.sendTelemetryFloat("humidity", h);
+  Serial.print(F("Humidity: "));
+  Serial.print(h);
+  Serial.print(F("%  Temperature: "));
+  Serial.print(t);
+  Serial.print(F("°C "));
   tb.loop();
 }
 
